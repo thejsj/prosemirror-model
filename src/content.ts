@@ -141,7 +141,9 @@ export class ContentMatch {
   /// Get the _n_​th outgoing edge from this node in the finite
   /// automaton that describes the content expression.
   edge(n: number): MatchEdge {
-    if (n >= this.next.length) throw new RangeError(`There's no ${n}th edge in this content match`)
+    if (n >= this.next.length) {
+      throw new RangeError(`There's no ${n}th edge in this content match: there are only ${this.next.length} edges`)
+    }
     return this.next[n]
   }
 

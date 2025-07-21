@@ -80,8 +80,9 @@ export class Slice {
   static fromJSON(schema: Schema, json: any): Slice {
     if (!json) return Slice.empty
     let openStart = json.openStart || 0, openEnd = json.openEnd || 0
-    if (typeof openStart != "number" || typeof openEnd != "number")
-      throw new RangeError("Invalid input for Slice.fromJSON")
+    if (typeof openStart != "number" || typeof openEnd != "number") {
+      throw new RangeError(`Invalid input for Slice.fromJSON: openStart ${openStart} and openEnd ${openEnd} are not numbers`)
+    }
     return new Slice(Fragment.fromJSON(schema, json.content), openStart, openEnd)
   }
 
@@ -102,10 +103,14 @@ function removeRange(content: Fragment, from: number, to: number): Fragment {
   let {index, offset} = content.findIndex(from), child = content.maybeChild(index)
   let {index: indexTo, offset: offsetTo} = content.findIndex(to)
   if (offset == from || child!.isText) {
-    if (offsetTo != to && !content.child(indexTo).isText) throw new RangeError("Removing non-flat range")
+    if (offsetTo != to && !content.child(indexTo).isText) {
+      throw new RangeError(`Cannot remove non-flat range - the range spans multiple nodes (from node index ${index} to ${indexTo}). The range must be contained within a single node.`)
+    }
     return content.cut(0, from).append(content.cut(to))
   }
-  if (index != indexTo) throw new RangeError("Removing non-flat range")
+  if (index != indexTo) {
+    throw new RangeError(`Cannot remove non-flat range - the range spans multiple nodes (from node index ${index} to ${indexTo}). The range must be contained within a single node.`)
+  }
   return content.replaceChild(index, child!.copy(removeRange(child!.content, from - offset - 1, to - offset - 1)))
 }
 
@@ -120,10 +125,12 @@ function insertInto(content: Fragment, dist: number, insert: Fragment, parent?: 
 }
 
 export function replace($from: ResolvedPos, $to: ResolvedPos, slice: Slice) {
-  if (slice.openStart > $from.depth)
-    throw new ReplaceError("Inserted content deeper than insertion position")
-  if ($from.depth - slice.openStart != $to.depth - slice.openEnd)
-    throw new ReplaceError("Inconsistent open depths")
+  if (slice.openStart > $from.depth) {
+    throw new ReplaceError(`Inserted content deeper than insertion position: slice open start ${slice.openStart} is greater than from depth ${$from.depth}`)
+  }
+  if ($from.depth - slice.openStart != $to.depth - slice.openEnd) {
+    throw new ReplaceError(`Inconsistent open depths: from depth ${$from.depth} - slice open start ${slice.openStart} (${$from.depth - slice.openStart}) does not match to depth ${$to.depth} - slice open end ${slice.openEnd} (${$to.depth - slice.openEnd})`)
+  }
   return replaceOuter($from, $to, slice, 0)
 }
 
@@ -144,8 +151,9 @@ function replaceOuter($from: ResolvedPos, $to: ResolvedPos, slice: Slice, depth:
 }
 
 function checkJoin(main: Node, sub: Node) {
-  if (!sub.type.compatibleContent(main.type))
-    throw new ReplaceError("Cannot join " + sub.type.name + " onto " + main.type.name)
+  if (!sub.type.compatibleContent(main.type)) {
+    throw new ReplaceError(`Cannot join ${sub.type.name} onto ${main.type.name}`)
+  }
 }
 
 function joinable($before: ResolvedPos, $after: ResolvedPos, depth: number) {
